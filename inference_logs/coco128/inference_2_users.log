@@ -1,7 +1,0 @@
-Simulated 2 users inference
-User 1: Total=0.66s, Avg latency=0.0165s, FPS=60.64
-User 2: Total=0.66s, Avg latency=0.0165s, FPS=60.64
-Average total time: 0.66s
-Max total time difference: 0.00s
-Total throughput (FPS): 100.08
-GPU Utilization: 0.00% | Memory Utilization: 2.88%

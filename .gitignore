@@ -1,7 +1,9 @@
 coco/
+coco128/
 datasets/
 runs/
 train_log/
 training_logs/
 coco2017*.zip
+coco*.zip
 yolo*n.pt
