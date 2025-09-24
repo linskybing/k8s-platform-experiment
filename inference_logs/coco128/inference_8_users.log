@@ -1,0 +1,14 @@
+Simulated 8 users inference
+User 1: Total=6.68s, Avg latency=0.1669s, FPS=5.99
+User 2: Total=6.67s, Avg latency=0.1669s, FPS=5.99
+User 3: Total=6.67s, Avg latency=0.1669s, FPS=5.99
+User 4: Total=6.68s, Avg latency=0.1669s, FPS=5.99
+User 5: Total=6.67s, Avg latency=0.1669s, FPS=5.99
+User 6: Total=6.67s, Avg latency=0.1669s, FPS=5.99
+User 7: Total=6.67s, Avg latency=0.1669s, FPS=5.99
+User 8: Total=6.68s, Avg latency=0.1669s, FPS=5.99
+Average total time: 6.68s
+Max total time difference: 0.00s
+Total throughput (FPS): 40.68
+GPU Utilization: 0.00% | Memory Utilization: 5.56%
+CP (FPS / price): 0.001507
