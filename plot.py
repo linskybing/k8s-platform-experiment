@@ -20,12 +20,12 @@ LOG_DIR = f"inference_logs/{DATASET_NAME}"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 GPU_PRICE = {
-    "RTX5070TI": 26990,
+    "RTX5070TI": 1600,
 }
 CURRENT_GPU = "RTX5070TI"
 
 SILENT = True
-CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
+CSV_FILE = os.path.join(LOG_DIR, f"summary_{CURRENT_GPU}.csv")
 
 MODEL = None
 
@@ -66,12 +66,12 @@ def user_inference(user_id):
 
     # warmup
     for _ in range(5):
-        _ = MODEL(img, verbose=False, show=False)
+        _ = MODEL(img, verbose=False, show=False, save=False)
 
     # timed inference
     start = time.time()
     for _ in range(NUM_RUNS):
-        _ = MODEL(img, verbose=False, show=False)
+        _ = MODEL(img, verbose=False, show=False, save=False)
     end = time.time()
 
     elapsed = end - start
@@ -91,7 +91,7 @@ if __name__ == "__main__":
         writer = csv.writer(fcsv)
         writer.writerow([
             "Users", "Avg_Total_Time(s)", "Avg_Latency(s)", "Avg_FPS_per_user",
-            "Total_Throughput_FPS", "GPU_Util(%)", "Mem_Util(%)", "GPU_Price", "CP(FPS_per_$)"
+            "Total_Throughput_FPS", "GPU_Util(%)", "Mem_Util(%)", "GPU_Price"
         ])
 
     summary_rows = []
@@ -122,7 +122,6 @@ if __name__ == "__main__":
 
         gpu_util, mem_util = get_gpu_utilization()
         gpu_price = GPU_PRICE.get(CURRENT_GPU, 1.0)
-        cp_value = total_fps / gpu_price if gpu_price else 0.0
 
         # write log file
         with open(log_file, "w") as flog:
@@ -133,15 +132,14 @@ if __name__ == "__main__":
             flog.write(f"Max total time difference: {max_diff:.2f}s\n")
             flog.write(f"Total throughput (FPS): {total_fps:.2f}\n")
             flog.write(f"GPU Utilization: {gpu_util:.2f}% | Memory Utilization: {mem_util:.2f}%\n")
-            flog.write(f"CP (FPS / price): {cp_value:.6f}\n")
 
         # append CSV
         with open(CSV_FILE, "a", newline="") as fcsv:
             writer = csv.writer(fcsv)
             writer.writerow([NUM_USERS, avg_total_time, avg_latency, avg_fps,
-                             total_fps, gpu_util, mem_util, gpu_price, cp_value])
+                             total_fps, gpu_util, mem_util, gpu_price])
 
-        summary_rows.append((NUM_USERS, avg_latency, avg_fps, total_fps, gpu_util, cp_value))
+        summary_rows.append((NUM_USERS, avg_latency, avg_fps, total_fps, gpu_util))
 
         if not SILENT:
             for r in sorted(results, key=lambda x: x[0]):
@@ -150,7 +148,6 @@ if __name__ == "__main__":
             print(f"Max total time difference: {max_diff:.2f}s")
             print(f"Total throughput (FPS): {total_fps:.2f}")
             print(f"GPU Utilization: {gpu_util:.2f}% | Memory Utilization: {mem_util:.2f}%")
-            print(f"Cost-Performance (FPS/$): {cp_value:.6f}")
 
     # --------------------------
     # Check all CSVs in log dir
@@ -160,7 +157,7 @@ if __name__ == "__main__":
 
     for csv_file in csv_files:
         user_label = os.path.basename(csv_file).replace(".csv", "")
-        users, avg_latency, avg_fps_per_user, total_fps, gpu_utils, cp_vals = [], [], [], [], [], []
+        users, avg_latency, avg_fps_per_user, total_fps, gpu_utils = [], [], [], [], []
 
         with open(csv_file, "r") as fcsv:
             reader = csv.DictReader(fcsv)
@@ -170,22 +167,20 @@ if __name__ == "__main__":
                 avg_fps_per_user.append(float(row["Avg_FPS_per_user"]))
                 total_fps.append(float(row["Total_Throughput_FPS"]))
                 gpu_utils.append(float(row["GPU_Util(%)"]))
-                cp_vals.append(float(row["CP(FPS_per_$)"]))
         all_data[user_label] = {
             "users": users,
             "avg_latency": avg_latency,
             "avg_fps_per_user": avg_fps_per_user,
             "total_fps": total_fps,
-            "gpu_utils": gpu_utils,
-            "cp_vals": cp_vals
+            "gpu_utils": gpu_utils
         }
 
     # --------------------------
-    # Plot: Grouped bar chart with value labels
+    # Plot: Grouped bar chart with value labels (2 decimal places)
     # --------------------------
-    metrics = ["total_fps", "avg_latency", "gpu_utils", "cp_vals"]
-    titles = ["Total Throughput (FPS)", "Average Latency (s)", "GPU Utilization (%)", "Cost-Performance (FPS/$)"]
-    ylabel = ["FPS", "s", "%", "FPS/$"]
+    metrics = ["total_fps", "avg_latency", "gpu_utils"]
+    titles = ["Total Throughput (FPS)", "Average Latency (s)", "GPU Utilization (%)"]
+    ylabel = ["FPS", "s", "%"]
 
     plt.figure(figsize=(16, 12))
     x = np.arange(len(summary_rows))
@@ -196,10 +191,11 @@ if __name__ == "__main__":
         plt.subplot(2, 2, i+1)
         for idx, (label, data) in enumerate(all_data.items()):
             bars = plt.bar(x + idx*width, data[metric], width=width, label=label)
-            # 加上柱頂數值
+            # 加上柱頂數值 (2位小數)
             for bar in bars:
                 height = bar.get_height()
-                plt.text(bar.get_x() + bar.get_width()/2, height, f'{height:.1f}', ha='center', va='bottom', fontsize=8)
+                plt.text(bar.get_x() + bar.get_width()/2, height, f'{height:.2f}', 
+                         ha='center', va='bottom', fontsize=8)
         plt.xticks(x + width*(n_users-1)/2, [r[0] for r in summary_rows])
         plt.xlabel("Number of Users")
         plt.ylabel(ylabel[i])
