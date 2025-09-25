@@ -18,8 +18,9 @@ os.makedirs(LOG_DIR, exist_ok=True)
 GPU_PRICE = {
     "RTX4070 SUPER": 19900,
     "RTX5070 TI": 26990,
+    "RTX2080 TI": 10000,
 }
-CURRENT_GPU = "RTX5070 TI"
+CURRENT_GPU = "RTX2080 TI"
 CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
 SILENT = False
 

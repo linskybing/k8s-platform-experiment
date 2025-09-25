@@ -29,24 +29,20 @@ IMGS = glob.glob(os.path.join(IMAGE_DIR, "*.jpg"))
 gpu_vals, mem_vals = [], []
 stop_monitor = False
 
-def get_gpu_utilization():
-    try:
-        result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total",
-             "--format=csv,noheader,nounits"], encoding="utf-8"
-        )
-        gpu_util, mem_used, mem_total = map(float, result.strip().split(","))
-        mem_util = (mem_used / mem_total) * 100 if mem_total > 0 else 0.0
-        return gpu_util, mem_util
-    except Exception:
-        return 0.0, 0.0
+def get_gpu_utilization_nvml(handle):
+    util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+    mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    gpu_util = util.gpu
+    mem_util = (mem.used / mem.total) * 100 if mem.total > 0 else 0.0
+    return gpu_util, mem_util
 
-def monitor_gpu():
+def monitor_gpu(handle, interval=0.5):
     global gpu_vals, mem_vals, stop_monitor
     while not stop_monitor:
-        gpu, mem = get_gpu_utilization()
+        gpu, mem = get_gpu_utilization_nvml(handle)
         gpu_vals.append(gpu)
         mem_vals.append(mem)
+        time.sleep(interval)
 
 def inference_fps(model, image_paths, repeat=1):
     total_images = len(image_paths) * repeat
@@ -84,7 +80,8 @@ def run_user_process(user_id, return_dict):
 
 if __name__ == "__main__":
     manager = Manager()
-
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
     with open(CSV_FILE, "w", newline="") as fcsv:
         writer = csv.writer(fcsv)
         writer.writerow([
@@ -99,7 +96,7 @@ if __name__ == "__main__":
 
         stop_monitor = False
         gpu_vals, mem_vals = [], []
-        monitor_thread = threading.Thread(target=monitor_gpu)
+        monitor_thread = threading.Thread(target=monitor_gpu, args=(handle, 0.5))
         monitor_thread.start()
 
         start = time.time()
@@ -141,3 +138,4 @@ if __name__ == "__main__":
             ])
 
     print("\nTraining + YOLO FPS measurement finished. CSV saved:", CSV_FILE)
+    pynvml.nvmlShutdown()
