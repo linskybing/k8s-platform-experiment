@@ -8,6 +8,7 @@ import threading
 import shutil
 import glob
 import cv2
+import pynvml
 
 MODEL_PATH = "yolo11n.pt"
 DATA_DIR = "coco128"
