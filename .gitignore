@@ -5,3 +5,4 @@ runs/
 coco2017*.zip
 coco*.zip
 yolo*n.pt
+.env

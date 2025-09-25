@@ -32,6 +32,7 @@ header = [
     "Users", "MPS_Limit(%)", "Total_Time(s)", "Avg_Latency(s)", "Avg_YOLO_FPS", "Aggregate_FPS",
     "GPU_Max(%)", "GPU_Avg(%)", "GPU_Min(%)",
     "Mem_Max(%)", "Mem_Avg(%)", "Mem_Min(%)",
+    "Power_Max(W)", "Power_Avg(W)", "Power_Min(W)",
     "GPU_Price"
 ]
 
@@ -121,6 +122,9 @@ def update_map(data_map, num_users, handle, silent=SILENT):
     mem_max = max(mem_vals) if mem_vals else 0.0
     mem_avg = sum(mem_vals)/len(mem_vals) if mem_vals else 0.0
     mem_min = min(mem_vals) if mem_vals else 0.0
+    power_max = max(power_vals) if power_vals else 0.0
+    power_avg = sum(power_vals)/len(power_vals) if power_vals else 0.0
+    power_min = min(power_vals) if power_vals else 0.0
     gpu_price = GPU_PRICE.get(CURRENT_GPU, 1.0)
 
     total_time_avg = sum(r[0] for r in results) / num_users
@@ -131,10 +135,9 @@ def update_map(data_map, num_users, handle, silent=SILENT):
 
     new_row = {
         "Users": num_users,
-        "MPS_Limit(%)": round(mps_limit_avg,2),
-        "Total_Time(s)": round(total_time_avg,2),
-        "Avg_Latency(s)": round(avg_latency_val,4),
-        "Avg_YOLO_FPS": round(avg_fps_val,2),
+        "Total_Time(s)": round(avg_total_time,2),
+        "Avg_Latency(s)": round(avg_latency,4),
+        "Avg_YOLO_FPS": round(avg_fps,2),
         "Aggregate_FPS": round(aggregate_fps,2),
         "GPU_Max(%)": round(gpu_max,2),
         "GPU_Avg(%)": round(gpu_avg,2),
@@ -142,15 +145,21 @@ def update_map(data_map, num_users, handle, silent=SILENT):
         "Mem_Max(%)": round(mem_max,2),
         "Mem_Avg(%)": round(mem_avg,2),
         "Mem_Min(%)": round(mem_min,2),
+        "Power_Max(W)": round(power_max,2),
+        "Power_Avg(W)": round(power_avg,2),
+        "Power_Min(W)": round(power_min,2),
+        "MPS_Limit(%)": round(mps_limit,2),
         "GPU_Price": gpu_price
     }
 
     data_map[num_users] = new_row
 
     if not silent:
-        print(f"Users: {num_users} | Total_Time: {total_time_avg:.2f}s | "
-              f"Avg_FPS: {avg_fps_val:.2f} | Aggregate_FPS: {aggregate_fps:.2f} | "
-              f"GPU Avg: {gpu_avg:.2f}% | Mem Avg: {mem_avg:.2f}%")
+        print(f"Users: {num_users} | Avg Total Time: {avg_total_time:.4f}s | "
+              f"Avg Latency: {avg_latency:.6f}s | Avg FPS: {avg_fps:.2f} | "
+              f"Aggregate FPS: {aggregate_fps:.2f} | GPU Avg: {gpu_avg:.2f}% | Mem Avg: {mem_avg:.2f}% | "
+              f"Power_Avg(W): {power_avg:.2f}W")
+
 
 # ---------------- Main ---------------- #
 if __name__ == "__main__":

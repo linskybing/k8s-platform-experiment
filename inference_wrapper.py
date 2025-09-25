@@ -7,7 +7,7 @@ import re
 import pynvml
 from dotenv import load_dotenv
 
-NUM_RUNS = 1000
+NUM_RUNS = 10
 DATASET_NAME = "coco128"
 LOG_DIR = f"inference_logs/{DATASET_NAME}"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -31,6 +31,7 @@ stop_monitor = False
 header = ["Users", "Total_Time(s)", "Avg_Latency(s)", "Avg_YOLO_FPS", "Aggregate_FPS",
           "GPU_Max(%)", "GPU_Avg(%)", "GPU_Min(%)",
           "Mem_Max(%)", "Mem_Avg(%)", "Mem_Min(%)",
+          "Power_Max(W)", "Power_Avg(W)", "Power_Min(W)",
           "MPS_Limit(%)", "GPU_Price"]
 
 # ---------------- CSV Map ---------------- #
@@ -120,6 +121,9 @@ def update_map(data_map, num_users, silent=SILENT):
     mem_max = max(mem_vals) if mem_vals else 0.0
     mem_avg = sum(mem_vals)/len(mem_vals) if mem_vals else 0.0
     mem_min = min(mem_vals) if mem_vals else 0.0
+    power_max = max(power_vals) if power_vals else 0.0
+    power_avg = sum(power_vals)/len(power_vals) if power_vals else 0.0
+    power_min = min(power_vals) if power_vals else 0.0
     gpu_price = GPU_PRICE.get(CURRENT_GPU, 1.0)
 
     avg_total_time = sum(r[0] for r in results) / num_users
@@ -140,6 +144,9 @@ def update_map(data_map, num_users, silent=SILENT):
         "Mem_Max(%)": round(mem_max,2),
         "Mem_Avg(%)": round(mem_avg,2),
         "Mem_Min(%)": round(mem_min,2),
+        "Power_Max(W)": round(power_max,2),
+        "Power_Avg(W)": round(power_avg,2),
+        "Power_Min(W)": round(power_min,2),
         "MPS_Limit(%)": round(mps_limit,2),
         "GPU_Price": gpu_price
     }
@@ -149,7 +156,8 @@ def update_map(data_map, num_users, silent=SILENT):
     if not silent:
         print(f"Users: {num_users} | Avg Total Time: {avg_total_time:.4f}s | "
               f"Avg Latency: {avg_latency:.6f}s | Avg FPS: {avg_fps:.2f} | "
-              f"Aggregate FPS: {aggregate_fps:.2f} | GPU Avg: {gpu_avg:.2f}% | Mem Avg: {mem_avg:.2f}%")
+              f"Aggregate FPS: {aggregate_fps:.2f} | GPU Avg: {gpu_avg:.2f}% | Mem Avg: {mem_avg:.2f}% | "
+              f"Power_Avg(W): {power_avg:.2f}W")
 
 # ---------------- Main ---------------- #
 if __name__ == "__main__":
