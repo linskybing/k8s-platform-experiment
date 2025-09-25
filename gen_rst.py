@@ -23,7 +23,7 @@ for csv_file in csv_files:
         for row in reader:
             users.append(int(row["Users"]))
             avg_latency.append(float(row["Avg_Latency(s)"]))
-            avg_fps_per_user.append(float(row["Avg_FPS_per_user"]))
+            avg_fps_per_user.append(float(row["Avg_YOLO_FPS"]))
             gpu_util.append(float(row["GPU_Max(%)"]))  # 對應你 CSV 的 GPU 最大使用率
 
     all_data[label] = {
