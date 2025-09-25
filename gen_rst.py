@@ -9,7 +9,7 @@ OUTPUT_DIR = os.path.join(LOG_DIR, "plots")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # --------------------------
-# 讀取所有 CSV
+# 讀取 CSV
 # --------------------------
 all_data = {}
 csv_files = glob.glob(os.path.join(LOG_DIR, "*.csv"))
@@ -24,7 +24,7 @@ for csv_file in csv_files:
             users.append(int(row["Users"]))
             avg_latency.append(float(row["Avg_Latency(s)"]))
             avg_fps_per_user.append(float(row["Avg_YOLO_FPS"]))
-            gpu_util.append(float(row["GPU_Max(%)"]))  # 對應你 CSV 的 GPU 最大使用率
+            gpu_util.append(float(row["GPU_Max(%)"]))
 
     all_data[label] = {
         "users": users,
@@ -34,36 +34,34 @@ for csv_file in csv_files:
     }
 
 # --------------------------
-# 畫單圖並存檔（平均 FPS / 平均延遲 / GPU 使用率）
+# 畫圖（Grouped Bar）
 # --------------------------
 metrics = ["avg_fps_per_user", "avg_latency", "gpu_util"]
 titles = ["Average FPS per User", "Average Latency (s)", "GPU Utilization (%)"]
 ylabels = ["FPS", "s", "%"]
 
-x = np.arange(len(all_data[list(all_data.keys())[0]]["users"]))
 n_labels = len(all_data)
-width = 0.8 / max(1, n_labels)
+users = all_data[list(all_data.keys())[0]]["users"]
+x = np.arange(len(users))
+width = 0.8 / n_labels  # 每個 GPU bar 的寬度
 
 for i, metric in enumerate(metrics):
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(14, 8))
     for idx, (label, data) in enumerate(all_data.items()):
+        # 偏移 x 軸位置，使 bar 分開
         bars = plt.bar(x + idx*width, data[metric], width=width, label=label)
-        # 加上數值標註
         for bar in bars:
             height = bar.get_height()
-            if metric == "avg_latency":
-                plt.text(bar.get_x() + bar.get_width()/2, height,
-                         f'{height:.4f}', ha='center', va='bottom', fontsize=8)
-            else:
-                plt.text(bar.get_x() + bar.get_width()/2, height,
-                         f'{height:.2f}', ha='center', va='bottom', fontsize=8)
+            # 將文字放在長條上方，避免重疊
+            plt.text(bar.get_x() + bar.get_width()/2, height + 0.01*height,
+                     f'{height:.2f}', ha='center', va='bottom', fontsize=9)
 
-    plt.xticks(x + width*(n_labels-1)/2, all_data[list(all_data.keys())[0]]["users"])
+    # x 軸置中
+    plt.xticks(x + width*(n_labels-1)/2, users)
     plt.xlabel("Number of Users")
     plt.ylabel(ylabels[i])
     plt.title(titles[i])
     plt.legend()
     plt.tight_layout()
-    # 高解析度存檔
     plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_summary.png"), dpi=300)
     plt.close()
