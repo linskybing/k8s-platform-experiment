@@ -7,7 +7,7 @@ import re
 import pynvml
 from dotenv import load_dotenv
 
-NUM_RUNS = 10
+NUM_RUNS = 3000
 DATASET_NAME = "coco128"
 LOG_DIR = f"inference_logs/{DATASET_NAME}"
 os.makedirs(LOG_DIR, exist_ok=True)
