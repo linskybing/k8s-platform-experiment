@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     data_map = read_csv_to_map(CSV_FILE)
 
-    for num_users in range(1, 13):
+    for num_users in range(1, 18):
         update_map(data_map, num_users, silent=SILENT)
 
     write_map_to_csv(CSV_FILE, data_map)
