@@ -7,7 +7,7 @@ import re
 import pynvml
 from dotenv import load_dotenv
 
-NUM_RUNS = 10
+NUM_RUNS = 3000
 DATASET_NAME = "coco128"
 LOG_DIR = f"inference_logs/{DATASET_NAME}"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -166,7 +166,7 @@ if __name__ == "__main__":
 
     data_map = read_csv_to_map(CSV_FILE)
 
-    for num_users in range(1, 13):
+    for num_users in range(1, 18):
         update_map(data_map, num_users, silent=SILENT)
 
     write_map_to_csv(CSV_FILE, data_map)
