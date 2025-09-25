@@ -6,10 +6,11 @@ import os
 import subprocess
 import csv
 import threading
+import pynvml
 
 IMAGE_PATH = "coco/images/val2017"
 MODEL_PATH = "yolo11n.pt"
-NUM_RUNS = 3000
+NUM_RUNS = 100
 DATASET_NAME = "coco128"
 LOG_DIR = f"inference_logs/{DATASET_NAME}"
 os.makedirs(LOG_DIR, exist_ok=True)
@@ -25,24 +26,20 @@ SILENT = False
 gpu_vals, mem_vals = [], []
 stop_monitor = False
 
-def get_gpu_utilization():
-    try:
-        result = subprocess.check_output(
-            ["nvidia-smi", "--query-gpu=utilization.gpu,memory.used,memory.total",
-             "--format=csv,noheader,nounits"], encoding="utf-8"
-        )
-        gpu_util, mem_used, mem_total = map(float, result.strip().split(","))
-        mem_util = (mem_used / mem_total) * 100 if mem_total > 0 else 0.0
-        return gpu_util, mem_util
-    except Exception:
-        return 0.0, 0.0
+def get_gpu_utilization_nvml(handle):
+    util = pynvml.nvmlDeviceGetUtilizationRates(handle)
+    mem = pynvml.nvmlDeviceGetMemoryInfo(handle)
+    gpu_util = util.gpu
+    mem_util = (mem.used / mem.total) * 100 if mem.total > 0 else 0.0
+    return gpu_util, mem_util
 
-def monitor_gpu():
+def monitor_gpu(handle, interval=0.5):
     global gpu_vals, mem_vals, stop_monitor
     while not stop_monitor:
-        gpu, mem = get_gpu_utilization()
+        gpu, mem = get_gpu_utilization_nvml(handle)
         gpu_vals.append(gpu)
         mem_vals.append(mem)
+        time.sleep(interval)
 
 def user_inference(user_id):
     model = YOLO(MODEL_PATH)
@@ -79,6 +76,8 @@ def user_inference(user_id):
     return user_id, elapsed, avg_latency, avg_fps
 
 if __name__ == "__main__":
+    pynvml.nvmlInit()
+    handle = pynvml.nvmlDeviceGetHandleByIndex(0)
     # CSV header
     with open(CSV_FILE, "w", newline="") as fcsv:
         writer = csv.writer(fcsv)
@@ -96,7 +95,7 @@ if __name__ == "__main__":
 
         stop_monitor = False
         gpu_vals, mem_vals = [], []
-        monitor_thread = threading.Thread(target=monitor_gpu)
+        monitor_thread = threading.Thread(target=monitor_gpu, args=(handle, 0.5))
         monitor_thread.start()
 
         t_start = time.time()
@@ -122,7 +121,7 @@ if __name__ == "__main__":
         with open(CSV_FILE, "a", newline="") as fcsv:
             writer = csv.writer(fcsv)
             writer.writerow([
-                NUM_USERS, round(t_end - t_start, 2), round(avg_latency, 2), round(avg_fps, 2),
+                NUM_USERS, round(t_end - t_start, 2), round(avg_latency, 4), round(avg_fps, 4),
                 round(gpu_max, 2), round(gpu_avg, 2), round(gpu_min, 2),
                 round(mem_max, 2), round(mem_avg, 2), round(mem_min, 2),
                 gpu_price
@@ -133,3 +132,4 @@ if __name__ == "__main__":
         if not SILENT:
             print(f"\n[Summary] Avg Total Time: {avg_total_time:.4f}s | Avg Latency: {avg_latency:.6f}s | Avg FPS: {avg_fps:.2f}")
             print(f"GPU Utilization Avg: {gpu_avg:.2f}% | Memory Utilization Avg: {mem_avg:.2f}%")
+    pynvml.nvmlShutdown()
