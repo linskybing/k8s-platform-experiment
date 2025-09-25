@@ -6,16 +6,19 @@ import threading
 import subprocess
 import re
 import pynvml
+from dotenv import load_dotenv
 
 LOG_DIR = "training_logs"
 os.makedirs(LOG_DIR, exist_ok=True)
 
+
+load_dotenv()
 GPU_PRICE = {
-    "RTX4070 SUPER": 19900,
-    "RTX5070 TI": 26990,
-    "RTX2080 TI": 26700,
+    "RTX4070 SUPER": int(os.getenv("GPU_PRICE_RTX4070_SUPER", 0)),
+    "RTX5070 TI": int(os.getenv("GPU_PRICE_RTX5070_TI", 0)),
+    "RTX2080 TI": int(os.getenv("GPU_PRICE_RTX2080_TI", 0)),
 }
-CURRENT_GPU = "RTX5070 TI"
+CURRENT_GPU = os.getenv("CURRENT_GPU", "RTX5070 TI")
 CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
 
 IMAGE_DIR = "coco/images/val2017"
