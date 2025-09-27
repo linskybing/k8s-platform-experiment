@@ -59,9 +59,9 @@ elif [ $PY_EXIT_CODE -ne 0 ]; then
 fi
 
 # 解析小時數
-HOURS=$(grep -oP '(\d+(?:\.\d+)?)\s*hours?' "$LOG_FILE" | head -n1)
-HOURS=$(echo "$HOURS" | grep -oP '\d+(\.\d+)?')
-ELAPSED=$(echo "${HOURS:-0} * 3600" | bc -l)
+HOURS=$(grep "epochs completed" "$LOG_FILE" | head -n1 | sed -E 's/.*in ([0-9.]+) hours.*/\1/')
+ELAPSED=$(awk "BEGIN{print $HOURS*3600}")
+
 
 # 計算 latency & fps
 AVG_LATENCY=$(awk -v e="$ELAPSED" -v n="$NUM_IMAGES" 'BEGIN{print (n>0)? e/n : 0}')
