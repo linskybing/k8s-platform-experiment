@@ -23,7 +23,7 @@ CURRENT_GPU = os.getenv("CURRENT_GPU", "RTX5070 TI")
 CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
 
 SILENT = False
-USE_MPS_LIMIT = False
+USE_MPS_LIMIT = True
 
 gpu_vals, mem_vals, power_vals = [], [], []
 stop_monitor = False
