@@ -24,7 +24,7 @@ CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
 IMAGE_DIR = "coco/images/val2017"
 IMGS = glob.glob(os.path.join(IMAGE_DIR, "*.jpg"))
 
-USE_MPS_LIMIT = False
+USE_MPS_LIMIT = True
 SILENT = False
 gpu_vals, mem_vals, power_vals = [], [], []
 stop_monitor = False
@@ -190,7 +190,7 @@ if __name__ == "__main__":
 
     data_map = read_csv_to_map(CSV_FILE)
 
-    for NUM_USERS in range(1, 8):
+    for NUM_USERS in range(1, 12):
         if err_detect: break
         update_map(data_map, NUM_USERS, handle, silent=SILENT)
 
