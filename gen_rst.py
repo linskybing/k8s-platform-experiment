@@ -3,13 +3,20 @@ import numpy as np
 import os
 import glob
 import csv
-import pandas as pd
-from dotenv import load_dotenv
 
-LOG_DIR = "inference_logs/"
+LOG_DIR = "inference_logs"
 OUTPUT_DIR = os.path.join(LOG_DIR, "plots")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-load_dotenv()
+
+# --------------------------
+# GPU 總記憶體 (MB)
+# --------------------------
+gpu_total_mem = {
+    "RTX3090": 24576,
+    "RTX5070 TI": 16384,
+    "RTX4070 SUPER": 12288,
+    "RTX2080 TI": 11264
+}
 
 # --------------------------
 # 讀取 CSV
@@ -19,29 +26,45 @@ csv_files = glob.glob(os.path.join(LOG_DIR, "*.csv"))
 
 for csv_file in csv_files:
     label = os.path.basename(csv_file).replace(".csv", "")
-    users, avg_latency, avg_fps_per_user, gpu_util = [], [], [], []
+    users, avg_latency, avg_fps_per_user, gpu_util, avg_power, max_mem_gb, agg_fps = [], [], [], [], [], [], []
 
     with open(csv_file, "r") as fcsv:
         reader = csv.DictReader(fcsv)
         for row in reader:
-            user_count = int(row["Users"])
-            if user_count > 12:
+            u = int(row["Users"])
+            if u > 13:
                 continue
-            users.append(user_count)
+            users.append(u)
             avg_latency.append(float(row["Avg_Latency(s)"]))
             avg_fps_per_user.append(float(row["Avg_YOLO_FPS"]))
             gpu_util.append(float(row["GPU_Max(%)"]))
+            avg_power.append(float(row.get("Power_Avg(W)", 0)))
+            agg_fps.append(float(row.get("Aggregate_FPS", 0)))
 
-    all_data[label] = {
-        "users": users,
-        "avg_latency": avg_latency,
-        "avg_fps_per_user": avg_fps_per_user,
-        "gpu_util": gpu_util
-    }
+            # Mem_Max(%) → GB
+            mem_percent = float(row.get("Mem_Max(%)", 0))
+            total_mem = gpu_total_mem.get(label, 0)
+            max_mem_gb.append(mem_percent * total_mem / 1024 / 100)
+
+    if users:
+        all_data[label] = {
+            "users": users,
+            "avg_latency": avg_latency,
+            "avg_fps_per_user": avg_fps_per_user,
+            "gpu_util": gpu_util,
+            "avg_power": avg_power,
+            "max_mem_gb": max_mem_gb,
+            "agg_fps": agg_fps
+        }
 
 # --------------------------
-# 固定 GPU 排序與顏色
+# 畫圖設定
 # --------------------------
+metrics = ["avg_fps_per_user", "agg_fps", "avg_latency", "gpu_util", "avg_power", "max_mem_gb"]
+titles = ["Average FPS per User", "Aggregate FPS", "Average Latency (s)", "GPU Utilization (%)",
+          "Average Power (W)", "Max Memory (GB)"]
+ylabels = ["FPS", "FPS", "s", "%", "W", "GB"]
+
 gpu_order = ["RTX3090", "RTX5070 TI", "RTX4070 SUPER", "RTX2080 TI"]
 gpu_colors = {
     "RTX3090": "#1f77b4",
@@ -49,70 +72,49 @@ gpu_colors = {
     "RTX4070 SUPER": "#2ca02c",
     "RTX2080 TI": "#d62728"
 }
-all_data = {k: all_data[k] for k in gpu_order if k in all_data}
 
-# --------------------------
-# 畫圖設定
-# --------------------------
-metrics = ["avg_fps_per_user", "avg_latency", "gpu_util"]
-titles = ["Average FPS per User", "Average Latency (s)", "GPU Utilization (%)"]
-ylabels = ["FPS", "s", "%"]
-
-n_labels = len(all_data)
 users = all_data[list(all_data.keys())[0]]["users"]
 x = np.arange(len(users))
-total_width = 0.8  # 一組柱子總寬度
-width = total_width / n_labels  # 每個柱子的寬度自動調整
+width = 0.18
+gap = 0.02
 
-# --------------------------
-# 畫長條圖（Grouped Bar）並加數字標籤
-# --------------------------
 for i, metric in enumerate(metrics):
-    plt.figure(figsize=(18, 10))
-    for idx, (label, data) in enumerate(all_data.items()):
-        bars = plt.bar(x + idx*width, data[metric], width=width,
-                       label=label, color=gpu_colors.get(label, None))
-        for bar in bars:
-            height = bar.get_height()
-            plt.text(
-                bar.get_x() + bar.get_width()/2,
-                height + 0.01 * max(data[metric]),
-                f'{height:.2f}',
-                ha='center', va='bottom', fontsize=10
-            )
+    # ----------------- 長條圖 -----------------
+    plt.figure(figsize=(14, 8))
+    bars_plotted = False
+    for idx, label in enumerate(gpu_order):
+        if label not in all_data:
+            continue
+        data = all_data[label][metric]
+        offset = idx * (width + gap)
+        plt.bar(x + offset, data, width=width, label=label, color=gpu_colors.get(label))
+        bars_plotted = True
 
-    plt.xticks(x + width*(n_labels-1)/2, users)
-    plt.xlabel("Number of Users")
-    plt.ylabel(ylabels[i])
-    plt.title(titles[i])
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_summary.png"), dpi=300)
+    if bars_plotted:
+        total_group_width = len([l for l in gpu_order if l in all_data]) * width + \
+                            (len([l for l in gpu_order if l in all_data]) - 1) * gap
+        plt.xticks(x + total_group_width / 2 - width / 2, users)
+        plt.xlabel("Number of Users")
+        plt.ylabel(ylabels[i])
+        plt.title(titles[i])
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_bar.png"), dpi=300)
     plt.close()
 
-# --------------------------
-# 畫折線圖（趨勢比較）並加數字標籤
-# --------------------------
-for i, metric in enumerate(metrics):
-    plt.figure(figsize=(18, 10))
+    # ----------------- 趨勢圖 (每 GPU 一條線) -----------------
+    plt.figure(figsize=(14, 8))
     for label in gpu_order:
-        if label in all_data:
-            data = all_data[label]
-            plt.plot(data["users"], data[metric], marker="o",
-                     label=label, color=gpu_colors.get(label, None), linewidth=2)
-            # 折線圖加數字標籤
-            for u, val in zip(data["users"], data[metric]):
-                plt.text(
-                    u, val + 0.02 * max(data[metric]),
-                    f'{val:.2f}',
-                    ha='center', va='bottom', fontsize=10
-                )
+        if label not in all_data:
+            continue
+        data = all_data[label][metric]
+        plt.plot(users, data, marker='o', linewidth=2, label=label, color=gpu_colors.get(label))
 
     plt.xlabel("Number of Users")
     plt.ylabel(ylabels[i])
-    plt.title(titles[i] + " (Trend)")
+    plt.title(f"{titles[i]} Trend by GPU")
+    plt.xticks(users)
     plt.legend()
-    plt.grid(True)
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_trend.png"), dpi=300)
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_trend_by_gpu.png"), dpi=300)
     plt.close()
