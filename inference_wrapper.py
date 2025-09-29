@@ -18,6 +18,7 @@ GPU_PRICE = {
     "RTX4070 SUPER": int(os.getenv("GPU_PRICE_RTX4070_SUPER", 0)),
     "RTX5070 TI": int(os.getenv("GPU_PRICE_RTX5070_TI", 0)),
     "RTX2080 TI": int(os.getenv("GPU_PRICE_RTX2080_TI", 0)),
+    "RTX3090": 46900
 }
 CURRENT_GPU = os.getenv("CURRENT_GPU", "RTX5070 TI")
 CSV_FILE = os.path.join(LOG_DIR, f"{CURRENT_GPU}.csv")
