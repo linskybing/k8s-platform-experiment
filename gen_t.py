@@ -148,3 +148,52 @@ plt.title("GPU Price per Memory")
 plt.tight_layout()
 plt.savefig(os.path.join(OUTPUT_DIR, "price_per_mem_bar.png"), dpi=300)
 plt.close()
+
+# --------------------------
+# 畫 Users 趨勢圖 (FPS, Latency, Power, GPU Util, Memory)
+# --------------------------
+metrics_users = ["avg_fps_per_user", "agg_fps", "avg_latency", "gpu_util", "avg_power", "max_mem_gb"]
+titles_users = ["Average FPS per User", "Aggregate FPS", "Average Latency (s)", "GPU Utilization (%)", "Average Power (W)", "Memory (GB)"]
+ylabels_users = ["FPS", "FPS", "s", "%", "W", "GB"]
+figsize_users = (14, 8)
+
+for i, metric in enumerate(metrics_users):
+    plt.figure(figsize=figsize_users)
+    
+    for idx, gpu in enumerate(gpu_order):
+        if gpu not in all_data:
+            continue
+        x = all_data[gpu]["users"]
+        y = all_data[gpu][metric]
+        plt.plot(x, y, marker='o', label=gpu, color=gpu_colors.get(gpu))
+        # 標註每個點的數值
+        for xi, yi in zip(x, y):
+            plt.text(xi, yi * 1.01, f"{yi:.2f}", ha='center', va='bottom', fontsize=10)
+    
+    plt.xlabel("Number of Users")
+    plt.ylabel(ylabels_users[i])
+    plt.title(titles_users[i])
+    plt.xticks(range(1, max([len(all_data[g]["users"]) for g in gpu_order if g in all_data])+1))
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(os.path.join(OUTPUT_DIR, f"{metric}_trend.png"), dpi=300)
+    plt.close()
+
+# --------------------------
+# 畫 Price / Mem 趨勢圖 (GPU 為 X)
+# --------------------------
+plt.figure(figsize=(12, 6))
+x = np.arange(len(gpu_order))
+y = [all_data[g]["price_per_mem"][0] if g in all_data else 0 for g in gpu_order]
+plt.plot(x, y, marker='o', linestyle='-', color='tab:blue')
+for xi, yi in zip(x, y):
+    plt.text(xi, yi*1.01, f"{yi:.2f}", ha='center', va='bottom', fontsize=10)
+
+plt.xticks(x, gpu_order)
+plt.ylabel("Price / Memory (TWD/GB)")
+plt.title("GPU Price per Memory")
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.savefig(os.path.join(OUTPUT_DIR, "price_per_mem_trend.png"), dpi=300)
+plt.close()
